@@ -1,0 +1,41 @@
+###################################################
+#	DSMM v0.8 - Dedicaded Server Minecraft Manager  #
+#	Author: Fabrimat                                #
+#	Repository: https://github.com/Fabrimat/DSMM    #
+###################################################
+#
+# To add more server copy and paste the first server below.
+#
+servers:
+  # Here are some templates.
+  # The name you will use in the program
+  bungeecord:
+    # The name of the screen
+    name: bungee
+    # The RAM in Java format
+    ram: 512M
+    # The file.jar to execute
+    filename: BungeeCord.jar
+    # The directory where is located the file.jar
+    directory: /home/server/bungee
+    # The command that is needed to stop the server
+    stopcommand: end
+    # The description, write what you want
+    description: 'The BungeeCord Network'
+    # The ip from where accepts connections
+    serverip: 0.0.0.0
+    # Actually non working
+    port: 25565
+  lobby:
+    name: lobby
+    ram: 2048M
+    filename: spigot.jar
+    directory: /home/server/lobby
+    stopcommand: stop
+    description: 'The default connection server'
+     # The ip from where accepts connections.
+     # If it's connected with a BungeeCord Server this shoud be the BungeeCord Ip
+    serverip: 0.0.0.0
+    port: 25566
+programinfo:
+  version: 0.8 #Do not change it!
