@@ -6,36 +6,34 @@
 #
 # To add more server copy and paste the first server below.
 #
-servers:
+Servers:
   # Here are some templates.
   # The name you will use in the program
-  bungeecord:
+  Bungeecord:
     # The name of the screen
-    name: bungee
+    Name: Bungee
     # The RAM in Java format
-    ram: 512M
+    Ram: 512M
     # The file.jar to execute
-    filename: BungeeCord.jar
+    File_Name: BungeeCord.jar
     # The directory where is located the file.jar
-    directory: /home/server/bungee
+    Directory: /home/server/bungee
     # The command that is needed to stop the server
-    stopcommand: end
+    Stop_Command: end
     # The description, write what you want
-    description: 'The BungeeCord Network'
+    Description: 'The BungeeCord Network'
     # The ip from where accepts connections
-    serverip: 0.0.0.0
+    Server_Ip: 0.0.0.0
     # Actually non working
-    port: 25565
-  lobby:
-    name: lobby
-    ram: 2048M
-    filename: spigot.jar
-    directory: /home/server/lobby
-    stopcommand: stop
-    description: 'The default connection server'
-     # The ip from where accepts connections.
-     # If it's connected with a BungeeCord Server this shoud be the BungeeCord Ip
-    serverip: 0.0.0.0
-    port: 25566
-programinfo:
-  version: 0.8 #Do not change it!
+    Port: 25565
+  Lobby:
+    Name: Lobby
+    Ram: 2048M
+    File_Name: spigot.jar
+    Directory: /home/server/lobby
+    Stop_Command: stop
+    Description: 'The default connection server'
+    Server_Ip: 0.0.0.0
+    Port: 25566
+Program_Info:
+  Version: 0.8 #Do not change it!
