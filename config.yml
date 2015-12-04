@@ -1,39 +1,60 @@
-###################################################
-#	DSMM v0.8 - Dedicaded Server Minecraft Manager  #
-#	Author: Fabrimat                                #
-#	Repository: https://github.com/Fabrimat/DSMM    #
-###################################################
-#
-# To add more server copy and paste the first server below.
-#
-Servers:
-  # Here are some templates.
-  # The name you will use in the program
-  Bungeecord:
-    # The name of the screen
-    Name: Bungee
-    # The RAM in Java format
-    Ram: 512M
-    # The file.jar to execute
-    File_Name: BungeeCord.jar
-    # The directory where is located the file.jar
-    Directory: /home/server/bungee
-    # The command that is needed to stop the server
-    Stop_Command: end
-    # The description, write what you want
-    Description: 'The BungeeCord Network'
-    # The ip from where accepts connections
-    Server_Ip: 0.0.0.0
-    # Actually non working
-    Port: 25565
-  Lobby:
-    Name: Lobby
-    Ram: 2048M
-    File_Name: spigot.jar
-    Directory: /home/server/lobby
-    Stop_Command: stop
-    Description: 'The default connection server'
-    Server_Ip: 0.0.0.0
-    Port: 25566
-Program_Info:
-  Version: 0.8 #Do not change it!
+Backups:
+  FirstServer:
+    Active: True
+    Priority: High
+    Log: True
+    Files:
+      BungeeCord:
+        Type: Dir File
+        Source: /home/bungee/
+        Destination: /home/bungee/backups/
+        Compress: True
+      Lobby:
+        Type: Dir File
+        Source: /home/lobby/
+        Destination: /home/lobby/backups/
+        Compress: True
+    Settings:
+      Destination_Type: FTP
+      FTP:
+        Host:
+        Port:
+        Username:
+        Password:
+      Every:
+        Seconds: 0
+        Minutes: 0
+        Hours: 0
+        Days: 1
+  SecondServer:
+    Active: True
+    Priority: Medium
+    Log: True
+    Files:
+      BungeeCord:
+        Type: Dir File
+        Source: /home/bungee/
+        Destination: /home/bungee/backups/
+        Compress: True
+      Lobby:
+        Type: Dir File
+        Source: /home/lobby/
+        Destination: /home/lobby/backups/
+        Compress: True
+    Settings:
+      Destination_Type: Local
+      FTP:
+        Host:
+        Port:
+        Username:
+        Password:
+      Every:
+        Seconds: 0
+        Minutes: 0
+        Hours: 3
+        Days: 0
+Program_Settings:
+  Script_Dir: /home/scripts/
+  Max_Backups: 3
+  Debug_Level: 2
+  Version: 0.1
