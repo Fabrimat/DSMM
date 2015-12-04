@@ -177,7 +177,7 @@ def OptInputs():
 	print "4 - Stop server."
 	print "5 - Restart a server."
 	print "6 - Kill a server."
-	print "7 - Say hello."
+	print "7 - Get server infos."
 	print "8 - List all running servers."
 	print "9 - Exit."
 	Option = raw_input("\nInsert the option number: ")
@@ -215,7 +215,7 @@ def InputServerName():
 			PrintHelp = True
 			InvName = True
 		else:
-			for data in config["servers"]:
+			for data in config["Servers"]:
 				if ServerName == data:  # Check if servername is valid
 					ScreenName = Screen(ServerName)
 					InvName = False
@@ -296,7 +296,7 @@ def ServerStart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopComm
 def ServerConsole(ScreenName, Name):
 	if ScreenName.exists:
 		ScreenName.detach()
-		system('screen -UR ' + Name)
+		system('screen -U -r ' + Name)
 		exit()
 	else:
 		print "The Screen is not running. Check if it's running with this user, otherwise start it."
@@ -387,8 +387,8 @@ def ActServerList():
 	ServerListCount = 0
 	for data in list_screens():
 		screenlist = str(data)
-		for data in config["servers"]:
-			listname = config["servers"][data]["name"]
+		for data in config["Servers"]:
+			listname = config["Servers"][data]["name"]
 			ListServerCheck = "'" + listname + "'"
 			if ListServerCheck in screenlist:
 				ServerListCount = ServerListCount + 1
