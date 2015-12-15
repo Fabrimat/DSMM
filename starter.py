@@ -8,7 +8,7 @@
 
 __author__ = "Fabrimat"
 __license__ = "GPL"
-__version__ = "0.8"
+__version__ = "1.0"
 __maintainer__ = "Fabrimat"
 __email__ = "lr.fabrizio@gmail.com"
 __status__ = "Development"
