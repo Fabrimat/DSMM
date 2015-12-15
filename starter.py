@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 '''
 	DSMM v0.8 - Dedicaded Server Minecraft Manager
@@ -286,7 +286,7 @@ def ServerStart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopComm
 				print "Invalid input."
 	ScreenName = Screen(Name, True)
 	ScreenName.send_commands("cd " + Directory)
-	ScreenName.send_commands('java -Xmx' + Ram + ' -Xms' + Ram + ' -jar ' + FileName + ' -p ' + str(ServerPort) )
+	ScreenName.send_commands('java -Xmx' + Ram + ' -Xms' + Ram + ' -jar ' + FileName + ' -p ' + str(ServerPort) ' -ip ' )
 	ClearScreen()
 	print"\nServer successfully started!\n"
 	sleep(1)
