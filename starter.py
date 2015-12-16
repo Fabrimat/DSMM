@@ -158,6 +158,9 @@ class Screen(object):
 class ScreenNotFoundError(Exception):
     """raised when the screen does not exists"""
 
+# Finish of screenutils
+
+
 def ClearScreen():
 	call('clear', shell = True)
 	return
@@ -286,7 +289,7 @@ def ServerStart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopComm
 				print "Invalid input."
 	ScreenName = Screen(Name, True)
 	ScreenName.send_commands("cd " + Directory)
-	ScreenName.send_commands('java -Xmx' + Ram + ' -Xms' + Ram + ' -jar ' + FileName + ' -p ' + str(ServerPort) ' -ip ' )
+	ScreenName.send_commands('java -Xmx' + Ram + ' -Xms' + Ram + ' -jar ' + FileName + ' -p ' + str(ServerPort) + ' -ip ' + ServerIPListen)
 	ClearScreen()
 	print"\nServer successfully started!\n"
 	sleep(1)
