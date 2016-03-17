@@ -8,28 +8,30 @@
 
 __author__ = "Fabrimat"
 __license__ = "GPL"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Fabrimat"
 __email__ = "lr.fabrizio@gmail.com"
 __status__ = "Development"
 
-from sys import exit
-from os import name
+from sys import exit as sExit
+from os import name as osName
 #import logging
-if name != "posix":
+if osName != "posix":
 	exit("\nOS not supported.\n")
 	#logging.error("%s not supported.", os.name)
 from subprocess import call
-from threading import Thread
+from threading import Thread as thread
 from os import system
+import os.path
 from time import sleep
 try:
-    from commands import getoutput
+    from commands import getoutput as getOutput
 except:
-    from subprocess import getoutput
+    from subprocess import getoutput as getOutput
 
 # Third party
 import yaml
+from mcstatus import MinecraftServer as serverStatus
 
 #Import the config
 config = yaml.load(open('config.yml', 'r'))
@@ -45,9 +47,6 @@ C = '\033[36m'   # cyan
 GR = '\033[37m'  # gray
 T = '\033[93m'   # tan
 
-# Screenutils library
-# Repository: https://github.com/Christophe31/screenutils
-
 def list_screens():
     """List all the existing screens and build a Screen instance for each
     """
@@ -59,7 +58,7 @@ def list_screens():
 
 class Screen(object):
 
-    def __init__(self, name, initialize=False):
+    def __init__(self, name, initialize = False):
         self.name = name
         self._id = None
         self._status = None
@@ -69,75 +68,63 @@ class Screen(object):
 
     @property
     def id(self):
-        """return the identifier of the screen as string"""
         if not self._id:
-            self._set_screen_infos()
+            self._setScreenInfos()
         return self._id
 
     @property
     def status(self):
-        """return the status of the screen as string"""
-        self._set_screen_infos()
+        self._setScreenInfos()
         return self._status
 
     @property
     def exists(self):
-        """Tell if the screen session exists or not."""
-        # Parse the screen -ls call, to find if the screen exists or not.
-        # The screen -ls | grep name returns something like that:
-        #  "	28062.G.Terminal	(Detached)"
-        lines = getoutput("screen -ls | grep " + self.name).split('\n')
+        lines = getOutput("screen -ls | grep " + self.name).split('\n')
         return self.name in [".".join(l.split(".")[1:]).split("\t")[0]
                              for l in lines]
 
     def initialize(self):
         """initialize a screen, if does not exists yet"""
         if not self.exists:
-            self._id=None
-            # Detach the screen once attached, on a new tread.
-            Thread(target=self._delayed_detach).start()
-            # support Unicode (-U),
-            # attach to a new/existing named screen (-R).
+            self._id = None
+            thread(target=self._delayedDetach).start()
             system('screen -UR ' + self.name)
 
     def interrupt(self):
         """Insert CTRL+C in the screen session"""
-        self._screen_commands("eval \"stuff \\003\"")
+        self._screenCommands("eval \"stuff \\003\"")
 
     def kill(self):
-        """Kill the screen applications then close the screen"""
-        self._screen_commands('quit')
+        self._screenCommands('quit')
 
     def detach(self):
-        """detach the screen"""
-        self._check_exists()
+        self._checkExists()
         system("screen -d " + self.name)
 
-    def send_commands(self, *commands):
-        """send commands to the active gnu-screen"""
+    def sendCommands(self, *commands):
         self._check_exists()
         for command in commands:
-            self._screen_commands( 'stuff "' + command + '" ' ,
+            self._screenCommands( 'stuff "' + command + '" ' ,
                                    'eval "stuff \\015"' )
 
-    def add_user_access(self, unix_user_name):
-        """allow to share your session with an other unix user"""
-        self._screen_commands('multiuser on', 'acladd ' + unix_user_name)
+    def openConsole(self):
+        self._checkExists()
+        system("screen -r " + self.name)
 
-    def _screen_commands(self, *commands):
-        """allow to insert generic screen specific commands
-        a glossary of the existing screen command in `man screen`"""
-        self._check_exists()
+    def addUserAccess(self, unixUserName):
+        self._screenCommands('multiuser on', 'acladd ' + unixUserName)
+
+    def _screenCommands(self, *commands):
+        self._checkExists()
         for command in commands:
             system('screen -x ' + self.name + ' -X ' + command)
             sleep(0.02)
 
-    def _check_exists(self, message="Error code: 404"):
-        """check whereas the screen exist. if not, raise an exception"""
+    def _checkExists(self, message = "Error code: 404"):
         if not self.exists:
-            raise ScreenNotFoundError(message)
+            raise screenNotFoundError(message)
 
-    def _set_screen_infos(self):
+    def _setScreenInfos(self):
         """set the screen information related parameters"""
         if self.exists:
             infos = getoutput("screen -ls | grep %s" % self.name).split('\t')[1:]
@@ -148,284 +135,102 @@ class Screen(object):
             else:
                 self._status = infos[1][1:-1]
 
-    def _delayed_detach(self):
+    def _delayedDetach(self):
         sleep(0.5)
         self.detach()
 
     def __repr__(self):
         return "<%s '%s'>" % (self.__class__.__name__, self.name)
 
-class ScreenNotFoundError(Exception):
-    """raised when the screen does not exists"""
+class screenNotFoundError(Exception):
+    pass
 
-# Finish of screenutils
 
+class Server(object):
+
+    configVersion =
+
+    avaiableServers =
+
+    def __init__(self, name, initialize = True):
+        self.id = 
+        self.name =
+        self.ram =
+        self.fileName =
+        self.directory =
+        self.stopCommand =
+        self.description =
+        self.serverIp =
+        self.port =
+        self.runningInfo = serverStatus.lookup("%s:%i".format(self.serverIp,self.port))
+        if initialize:
+            self._initialize
+        return
+
+    def checkStart(self, all = False, selServer = None):
+        if all:
+            for value in avaiableServers:
+                if os.path.isfile("DSMMFiles/%s.sdat"):
+                    try:
+                        value.runningInfo.ping()
+                    except 
+                        raise serverError("Server is already running.")
+                loopServer = Server(value)
+                _start(loopServer.name)
+        else:
+            if selServer not None:
+                selServer = Server(selServer)
+                selServer._start
+            else:
+                raise dsmmError("selServer cannot be None.")
+
+    def _start(self):
+
+
+
+
+def spinning_cursor():
+    while True:
+        for cursor in '|/-\\':
+            yield cursor
+
+def print_cursor():
+    spinner = spinning_cursor()
+    while True:
+        stdout.write(spinner.next())
+        stdout.flush()
+        sleep(0.1)
+        stdout.write('\b')
 
 def ClearScreen():
 	call('clear', shell = True)
 	return
 
 def ProgramInfo():
-	print "DSMM v" + __version__ + " - Dedicaded Server Minecraft Manager by " + __author__
+	print "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
 	return "Please enter the inputs and don't leave them empty."
 
 def OptInputs():
 	#The start function, choose what to do
-	ClearScreen()
-	print ProgramInfo(),"\n"
-	print "Options:"
-	print "1 - Start server."
-	print "2 - Open a server console."
-	print "3 - Send a command to a server."
-	print "4 - Stop server."
-	print "5 - Restart a server."
-	print "6 - Kill a server."
-	print "7 - Get server infos."
-	print "8 - List all running servers."
-	print "9 - Exit."
-	Option = raw_input("\nInsert the option number: ")
-	try:
-		Option = int(Option)
-	except:
-		AppExit("Error. You entered an invalid value.")
+    repeatLoop = True
+    while errorLoop == True
+    	ClearScreen()
+    	print ProgramInfo(),"\n"
+    	print "Options:"
+    	print "1 - Start"
+    	print "2 - Open Console"
+    	print "3 - Send Command"
+    	print "4 - Stop"
+    	print "5 - Restart"
+    	print "6 - Kill"
+    	print "7 - Get infos."
+    	print "8 - List all running servers."
+    	print "9 - Exit."
+    	Option = raw_input("\nInsert the option number: ")
+    	try:
+    		Option = int(Option)
+            repeatLoop = False
+    	except:
+    		print "Error. You entered an invalid value."
+            repeatLoop = True
 	return Option
-
-def ServerList():
-	print "The avaiable server are:"
-	for data in config["servers"]:
-		print data
-	return
-
-def ErrorCheck(Option):
-	#Check if the option is valid
-	if Option < 1 and Option > 9:
-		exit("Invalid Option")
-	return
-
-
-def InputServerName():
-	#Insert the Server Name and validate it.
-	InvName = True
-	PrintHelp = False
-	ServerName = "NULL"
-	ScreenName = "NULL"
-	while InvName == True:  # Loop for QuestClose
-		ValidName = False
-		ServerName = raw_input("Insert the server name: ")
-		print ""
-		if ServerName == "help" or ServerName == "Help":
-			ServerList()
-			PrintHelp = True
-			InvName = True
-		else:
-			for data in config["Servers"]:
-				if ServerName == data:  # Check if servername is valid
-					ScreenName = Screen(ServerName)
-					InvName = False
-					break
-				else:
-					InvName = True
-		if InvName == True and PrintHelp == False:
-			print 'Invalid name. Type "help" for the list.'
-	return ServerName
-
-def GetServerInfo(ServerName):
-	Name = config["Servers"][ServerName]["Name"]
-	ScreenName = Screen(Name)
-	Ram = config["Servers"][ServerName]["Ram"]
-	FileName = config["Servers"][ServerName]["File_Name"]
-	Directory = config["Servers"][ServerName]["Directory"]
-	StopCommand = config["Servers"][ServerName]["Stop_Command"]
-	Description = config["Servers"][ServerName]["Description"]
-	ServerPort = config["Servers"][ServerName]["Port"]
-	ServerIPListen = config["Servers"][ServerName]["Server_Ip"]
-	return ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, Description, ServerPort, ServerIPListen
-
-def OptChoose(Option):
-	if Option == 1:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerStart(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], ServerInfo[8],  ServerInfo[9])
-	elif Option == 2:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerConsole(ServerInfo[1], ServerInfo[2])
-	elif Option == 3:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerCommand(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], ServerInfo[8],  ServerInfo[9])
-	elif Option == 4:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerStop(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], True)
-	elif Option == 5:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerRestart(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], ServerInfo[8],  ServerInfo[9])
-	elif Option == 6:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerKill(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5])
-	elif Option == 7:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		SayHello(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5],ServerInfo[6],ServerInfo[7], ServerInfo[8],  ServerInfo[9])
-	elif Option == 8:
-		ActServerList()
-	elif Option == 9:
-		AppExit()
-	return
-
-def ServerStart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen):
-	if ScreenName.exists:
-		while True: #Loop for QuestClose
-			QuestClose=raw_input("The Screen is already active, would you like to stop it? (y/n) - ")
-			if QuestClose == "y":
-				ServerStop(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, False)
-				break
-			elif QuestClose == "n":
-				AppExit()
-			else:
-				print "Invalid input."
-	ScreenName = Screen(Name, True)
-	ScreenName.send_commands("cd " + Directory)
-	ScreenName.send_commands('java -Xmx' + Ram + ' -Xms' + Ram + ' -jar ' + FileName + ' -p ' + str(ServerPort) + ' -ip ' + ServerIPListen)
-	ClearScreen()
-	print"\nServer successfully started!\n"
-	sleep(1)
-	AppExit()
-	return
-
-def ServerConsole(ScreenName, Name):
-	if ScreenName.exists:
-		ScreenName.detach()
-		system('screen -U -r ' + Name)
-		exit()
-	else:
-		print "The Screen is not running. Check if it's running with this user, otherwise start it."
-		raw_input("Press enter to continue...")
-		AppExit()
-	return
-
-def ServerCommand(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen):
-	if not ScreenName.exists:
-		print "The Screen is not running. Check if it's running with this user, otherwise start it."
-		raw_input("Press enter to continue...")
-		AppExit()
-	#AppExit("Server Command to complete.")
-	SendCommand = raw_input("Insert the commnd to send: ")
-	ScreenName.send_commands(SendCommand)
-	sleep(0.4)
-	QuestOpen = raw_input("Command sent. Would you like to open the screen? (y/n) - ")
-	if QuestOpen == "y":
-		ServerConsole(ScreenName, Name)
-	elif QuestOpen == "n":
-		AppExit()
-	else:
-		AppExit("Error. You entered an invalid value.")
-	return
-
-def ServerStop(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ExitValue):
-	if ScreenName.exists:
-		ScreenName.send_commands(StopCommand)
-		print"Sending the command..."
-		sleep(5)
-		ScreenName.send_commands("exit")
-		sleep(0.5)
-		if ScreenName.exists:
-			ScreenName.send_commands("exit")
-		print"Trying to close the screen..."
-		sleep(4.5)
-		if ScreenName.exists:
-			QuestOK = raw_input('The screen is not responding, would you like to open it or kill it? (o/k) - ')
-			if QuestOK == "o":
-				ServerConsole(ServerName, ScreenName, Name, Ram, FileName, Directory)
-			elif QuestOK == "k":
-				ServerKill(ServerName, ScreenName, Name, Ram, FileName, Directory)
-			else:
-				print "Invalid input."
-				raw_input("Press enter to continue...")
-				AppExit("Error. You entered an invalid value.")
-		else:
-			print"Screen successfully closed!"
-			sleep(2)
-			if ExitValue == True:
-				AppExit()
-	else:
-		print "The Screen is not running."
-		raw_input("Press enter to continue...")
-		AppExit()
-
-def ServerRestart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen):
-	ServerStop(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, False)
-	ServerStart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen)
-	return
-
-def ServerKill(ServerName, ScreenName, Name, Ram, FileName, Directory):
-	ScreenName.interrupt()
-	sleep(1)
-	ScreenName.kill()
-	if ScreenName.exists:
-		print "Impossible to kill the screen, kill it manually."
-		print 'To kill it press "CTRL+A" and then "K".'
-		raw_input("Press Enter to open the screen...")
-		ServerConsole(ServerName, ScreenName, Name, Ram, FileName, Directory)
-	print "Screen killed successfully!"
-	AppExit()
-	return
-
-def SayHello(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, Description, ServerPort, ServerIPListen):
-	print "\nHello user, here you are the informations of the server you selected:\n"
-	print "Name: ", ServerName
-	print "Ram : ", Ram
-	print "Filename: ", FileName
-	print "Directory: ", Directory
-	print "StopCommand: ", StopCommand
-	print "Description: ", Description
-	print "IP: ", ServerIPListen
-	print "Port: ", ServerPort
-	AppExit()
-
-def ActServerList():
-	ServerListCount = 0
-	for data in list_screens():
-		screenlist = str(data)
-		for data in config["Servers"]:
-			listname = config["Servers"][data]["name"]
-			ListServerCheck = "'" + listname + "'"
-			if ListServerCheck in screenlist:
-				ServerListCount = ServerListCount + 1
-	if ServerListCount == 0:
-		print "There are 0 servers running."
-	else:
-		print "There are " + str(ServerListCount) + " server running:\n"
-	ServerListCount = 0
-	for data in list_screens():
-		screenlist = str(data)
-		for data in config["Servers"]:
-			listname = config["Servers"][data]["Name"]
-			ListServerCheck = "'" + listname + "'"
-			if ListServerCheck in screenlist:
-				ServerListCount = ServerListCount + 1
-				print str(ServerListCount) + " - " + listname
-	AppExit()
-	return
-
-def AppExit(ExitError=None):
-	if ExitError is not None:
-		print "\n" + ExitError
-		exit("\nExiting..")
-	else:
-		print "\nExiting.."
-		exit()
-	return
-
-def main():
-	try:
-		Option = OptInputs()
-		OptChoose(Option)
-	except KeyboardInterrupt:
-		exit("\n You pressed Ctrl+C")
-
-if __name__ == "__main__":
-	main()
