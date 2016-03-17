@@ -122,7 +122,7 @@ class Screen(object):
 
     def _checkExists(self, message = "Error code: 404"):
         if not self.exists:
-            raise screenNotFoundError(message)
+            raise ScreenNotFoundError(message)
 
     def _setScreenInfos(self):
         """set the screen information related parameters"""
@@ -142,75 +142,118 @@ class Screen(object):
     def __repr__(self):
         return "<%s '%s'>" % (self.__class__.__name__, self.name)
 
-class screenNotFoundError(Exception):
-    pass
-
+class ScreenNotFoundError(Exception):
+    @Override
+    def __init__(self, value):
+        self.value = value
+    @Override
+    def __str__(self):
+        return repr(self.value)
 
 class Server(object):
 
-    configVersion =
+    configVersion = config["ConfigInfo"]["Version"]
 
-    avaiableServers =
+    avaiableServers = config["Servers"]
 
     def __init__(self, name, initialize = True):
-        self.id = 
-        self.name =
-        self.ram =
-        self.fileName =
-        self.directory =
-        self.stopCommand =
-        self.description =
-        self.serverIp =
-        self.port =
-        self.runningInfo = serverStatus.lookup("%s:%i".format(self.serverIp,self.port))
+        self.id = config["Servers"][name]["ID"]
+        self.name = config["Servers"][name]["Name"]
+        self.minRam = config["Servers"][name]["MinRAM"]
+        self.maxRam = config["Servers"][name]["MaxRAM"]
+        self.fileName = config["Servers"][name]["FileName"]
+        self.directory = config["Servers"][name]["Directory"]
+        self.stopCommand = config["Servers"][name]["StopCommand"]
+        self.description = config["Servers"][name]["Description"]
+        self.serverIp = config["Servers"][name]["IP"]
+        self.port = config["Servers"][name]["Port"]
+        self.runningInfo = serverStatus.lookup("{0}:{1}".format(self.serverIp,self.port))
         if initialize:
-            self._initialize
+            self.screen = self._initialize
+        else:
+            self.screen = None
         return
 
-    def checkStart(self, all = False, selServer = None):
-        if all:
-            for value in avaiableServers:
-                if os.path.isfile("DSMMFiles/%s.sdat"):
-                    try:
-                        value.runningInfo.ping()
-                    except 
-                        raise serverError("Server is already running.")
-                loopServer = Server(value)
-                _start(loopServer.name)
+    # def checkStart(self):
+    #     if selServer not None:
+    #         if os.path.isfile("DSMMFiles/%s%i.sdat".format(self.name,self.id)):
+    #             try:
+    #                 self.runningInfo.ping()
+    #                 raise ServerError("Server is already running")
+    #             except
+    #                 raise ServerError("Server seems died.")
+    #         selServer = Server(self)
+    #         selServer._start
+    #     else:
+    #         raise DsmmError("selServer cannot be None.")
+
+    def checkStatus(self):
+        # 0 = NOT RUNNING AND NOT INITIALIZED, 1 = RUNNING, 2 = NOT RESPONDING, 3 = INITIALIZED
+        if os.path.isfile("DSMMFiles/{0}{1}.sdat".format(self.name,self.id)):
+            try:
+                self.runningInfo.ping()
+                return 1
+            except
+                return 2
         else:
-            if selServer not None:
-                selServer = Server(selServer)
-                selServer._start
+            if self.screen is not None:
+                if Screen(self.name).exist:
+                    return 3
+                else:
+                    raise DsmmError("The screen is not running but the Server is initialized?")
             else:
-                raise dsmmError("selServer cannot be None.")
+                return 0
 
-    def _start(self):
+    def _checkRunning(self):
+        startCheckingTime = 0
+        while serverStarted < 120:
+            sleep(0.5)
+            if self.checkStatus is 1:
+                startCheckingTime = 121
+            startCheckingTime += 1
+        if startCheckingTime is 121:
+            return True
+        else:
+            return False
 
+    def _start(self, checkStarted = False):
+        preServerStatus = self.checkStatus
+        if preServerStatus == 3:
+            ScreenName.send_commands("cd %s".format(self.directory))
+        	ScreenName.send_commands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip{4}'.format(
+                self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
+            if checkStarted:
+                serverIsRunning = self._checkRunning
+                if serverIsRunning:
+                    print "Started"
+                else:
+                    print "Something gone wrong"
 
+    def _initialize(self):
+        return Screen(self.name, True)
 
-
-def spinning_cursor():
+def spinningCursor():
     while True:
         for cursor in '|/-\\':
             yield cursor
 
-def print_cursor():
-    spinner = spinning_cursor()
+def printCursor():
+    spinner = spinningCursor()
     while True:
         stdout.write(spinner.next())
         stdout.flush()
         sleep(0.1)
         stdout.write('\b')
 
-def ClearScreen():
+def clearScreen():
 	call('clear', shell = True)
 	return
 
-def ProgramInfo():
+def programInfo():
 	print "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
 	return "Please enter the inputs and don't leave them empty."
 
-def OptInputs():
+def optInputs():
 	#The start function, choose what to do
     repeatLoop = True
     while errorLoop == True
@@ -234,3 +277,17 @@ def OptInputs():
     		print "Error. You entered an invalid value."
             repeatLoop = True
 	return Option
+
+# def startAllServers():
+#     for value in avaiableServers:
+#         if selServer is None:
+#             if os.path.isfile("DSMMFiles/%s%i.sdat".format(value.name,value.id)):
+#                 try:
+#                     value.runningInfo.ping()
+#                     raise ServerError("Server is already running")
+#                 except
+#                     raise ServerError("Server seems died.")
+#             loopServer = Server(value)
+#             _start(loopServer.name)
+#         else:
+#             raise DsmmError("selServer must be None.")
