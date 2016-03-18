@@ -109,7 +109,7 @@ class Screen(object):
 
     def openConsole(self):
         self._checkExists()
-        system("screen -r " + self.name)
+        system("screen  -U -r " + self.name)
 
     def addUserAccess(self, unixUserName):
         self._screenCommands('multiuser on', 'acladd ' + unixUserName)
@@ -169,7 +169,7 @@ class Server(object):
         self.port = config["Servers"][name]["Port"]
         self.runningInfo = serverStatus.lookup("{0}:{1}".format(self.serverIp,self.port))
         if initialize:
-            self.screen = self._initialize
+            self.screen = self._initialize()
         else:
             self.screen = None
         return
@@ -181,7 +181,7 @@ class Server(object):
             tempFile = os.open("DSMMFiles/{0}{1}.sdat", "r")
             contentFile = tempFile.read()
             tempFile.close()
-            # Screen:Server:Checked
+            # Screen:Server:Checked:(Init=0,Start=1,Stop=2,Kill=3)
             contentFile.split(":")
             contentFile = int(contentFile)
             if contentFile[0] is 1:
@@ -221,7 +221,7 @@ class Server(object):
         startCheckingTime = 0
         while serverStarted < 120:
             sleep(0.5)
-            if self.checkStatus is goal:
+            if self.checkStatus() is goal:
                 startCheckingTime = 121
             startCheckingTime += 1
         if startCheckingTime is 121:
@@ -231,7 +231,7 @@ class Server(object):
         return retValue
 
     def start(self, checkStarted = False):
-        preServerStatus = self.checkStatus
+        preServerStatus = self.checkStatus()
         if preServerStatus == 3:
             self.screen.send_commands("cd %s".format(self.directory))
         	self.screen.send_commands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
@@ -240,10 +240,10 @@ class Server(object):
                 serverIsRunning = self._checkRunning(1)
                 tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
                 if serverIsRunning:
-                    tempFile.write("1:1:1")
+                    tempFile.write("1:1:1:1")
                     print "Started"
                 else:
-                    tempFile.write("1:1:0")
+                    tempFile.write("1:1:0:1")
                     print "Something gone wrong"
                 tempFile.close()
 
@@ -251,14 +251,15 @@ class Server(object):
         tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
         serverScreen = Screen(self.name, True)
         if serverScreen.exist:
-            tempFile.write("1:0:1")
+            tempFile.write("1:0:1:0")
         else:
+            tempFile.write("1:0:0:0")
             DsmmError("Could not initialize!")
         tempFile.close()
         return serverScreen
 
     def stop(self, checkStopped = False):
-        preServerStatus = self.checkStatus
+        preServerStatus = self.checkStatus()
         if preServerStatus is 0:
             print "Server is not running."
         else if preServerStatus is 1:
@@ -276,9 +277,31 @@ class Server(object):
                     print "Stopped"
                 else:
                     tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
-                    tempFile.write("0:0:0")
+                    tempFile.write("0:0:0:2")
                     tempFile.close()
                     print "Something gone wrong"
+
+    def openConsole(self):
+        if self.checkStatus() is not 0:
+            self.screen.openConsole()
+
+    def kill(self):
+        if self.screen.exist():
+            self.screen.kill()
+            self.screen.sendCommands("exit")
+            try:
+                self.checkStatus()
+            except ServerError:
+                tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
+                tempFile.write("0:0:0:3")
+                tempFile.close()
+                print "Something gone wrong"
+                raise DsmmError("Error while killing.. Fix the Server sdat!")
+            except DsmmError:
+                os.remove("DSMMFiles/{0}{1}.sdat".format(self.name,self.id))
+                pass
+        if screen.exist():
+            DsmmError("The screen was not killed?")
 
 def spinningCursor():
     while True:
