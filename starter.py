@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 '''
-	DSMM v0.8 - Dedicaded Server Minecraft Manager
+	DSMM v2.0 - Dedicaded Server Minecraft Manager
 	Author: Fabrimat
 	Repository: https://github.com/Fabrimat/DSMM
 '''
@@ -163,7 +163,7 @@ class Server(object):
         self.maxRam = config["Servers"][name]["MaxRAM"]
         self.fileName = config["Servers"][name]["FileName"]
         self.directory = config["Servers"][name]["Directory"]
-        self.stopCommand = config["Servers"][name]["StopCommand"]
+        self.stopCommands = config["Servers"][name]["StopCommands"]
         self.description = config["Servers"][name]["Description"]
         self.serverIp = config["Servers"][name]["IP"]
         self.port = config["Servers"][name]["Port"]
@@ -174,63 +174,111 @@ class Server(object):
             self.screen = None
         return
 
-    # def checkStart(self):
-    #     if selServer not None:
-    #         if os.path.isfile("DSMMFiles/%s%i.sdat".format(self.name,self.id)):
-    #             try:
-    #                 self.runningInfo.ping()
-    #                 raise ServerError("Server is already running")
-    #             except
-    #                 raise ServerError("Server seems died.")
-    #         selServer = Server(self)
-    #         selServer._start
-    #     else:
-    #         raise DsmmError("selServer cannot be None.")
-
     def checkStatus(self):
-        # 0 = NOT RUNNING AND NOT INITIALIZED, 1 = RUNNING, 2 = NOT RESPONDING, 3 = INITIALIZED
+        # 0 = NOT RUNNING , 1 = INITILIZED, 2 = RUNNING
+        retValue = 0
         if os.path.isfile("DSMMFiles/{0}{1}.sdat".format(self.name,self.id)):
-            try:
-                self.runningInfo.ping()
-                return 1
-            except
-                return 2
-        else:
-            if self.screen is not None:
-                if Screen(self.name).exist:
-                    return 3
+            tempFile = os.open("DSMMFiles/{0}{1}.sdat", "r")
+            contentFile = tempFile.read()
+            tempFile.close()
+            # Screen:Server:Checked
+            contentFile.split(":")
+            contentFile = int(contentFile)
+            if contentFile[0] is 1:
+                if contentFile[1] is 1:
+                    try:
+                        self.runningInfo.status()
+                        retValue =  2
+                    except
+                        raise ServerError("The remote server is not responding.")
                 else:
-                    raise DsmmError("The screen is not running but the Server is initialized?")
+                    if self.screen.exist():
+                        retValue =  1
+                    else:
+                        raise DsmmError("Screen should exist? Try to fix it!")
             else:
-                return 0
+                try:
+                    self.runningInfo.status()
+                    raise DsmmError("Server shouldn't be running!")
+                except
+                    DsmmError("There shoudn't be the file!")
+        else:
+            if self.screen.exist():
+                try:
+                    self.runningInfo.status()
+                    raise DsmmError("The Screen and the Server are running without the file?")
+                except
+                    raise DsmmError("The Screen is running without the file?")
+            else:
+                try:
+                    self.runningInfo.status()
+                    raise DsmmError("The Server is running without the file?")
+                except
+                    retValue = 0
+        return retValue
 
-    def _checkRunning(self):
+    def _checkRunning(self, goal):
         startCheckingTime = 0
         while serverStarted < 120:
             sleep(0.5)
-            if self.checkStatus is 1:
+            if self.checkStatus is goal:
                 startCheckingTime = 121
             startCheckingTime += 1
         if startCheckingTime is 121:
-            return True
+            retValue = True
         else:
-            return False
+            retValue =  False
+        return retValue
 
-    def _start(self, checkStarted = False):
+    def start(self, checkStarted = False):
         preServerStatus = self.checkStatus
         if preServerStatus == 3:
-            ScreenName.send_commands("cd %s".format(self.directory))
-        	ScreenName.send_commands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip{4}'.format(
+            self.screen.send_commands("cd %s".format(self.directory))
+        	self.screen.send_commands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
                 self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
             if checkStarted:
-                serverIsRunning = self._checkRunning
+                serverIsRunning = self._checkRunning(1)
+                tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
                 if serverIsRunning:
+                    tempFile.write("1:1:1")
                     print "Started"
                 else:
+                    tempFile.write("1:1:0")
                     print "Something gone wrong"
+                tempFile.close()
 
     def _initialize(self):
-        return Screen(self.name, True)
+        tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
+        serverScreen = Screen(self.name, True)
+        if serverScreen.exist:
+            tempFile.write("1:0:1")
+        else:
+            DsmmError("Could not initialize!")
+        tempFile.close()
+        return serverScreen
+
+    def stop(self, checkStopped = False):
+        preServerStatus = self.checkStatus
+        if preServerStatus is 0:
+            print "Server is not running."
+        else if preServerStatus is 1:
+            self.screen.sendCommands("exit")
+        else if preServerStatus is 2:
+            print "Stopping..."
+            for value in self.stopCommands:
+                self.screen.sendCommands(value)
+                sleep(0.3)
+            if checkStopped:
+                serverIsRunning = self._checkRunning(0)
+                if not serverIsRunning:
+                    os.remove("DSMMFiles/{0}{1}.sdat".format(self.name,self.id))
+                    self.screen = None
+                    print "Stopped"
+                else:
+                    tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
+                    tempFile.write("0:0:0")
+                    tempFile.close()
+                    print "Something gone wrong"
 
 def spinningCursor():
     while True:
@@ -244,6 +292,10 @@ def printCursor():
         stdout.flush()
         sleep(0.1)
         stdout.write('\b')
+
+def checkDir():
+    if not os.chdir("DSMMFiles"):
+        os.mkdir("DSMMFiles")
 
 def clearScreen():
 	call('clear', shell = True)
@@ -268,7 +320,8 @@ def optInputs():
     	print "6 - Kill"
     	print "7 - Get infos."
     	print "8 - List all running servers."
-    	print "9 - Exit."
+        print "9 - Fix"
+    	print "10 - Exit."
     	Option = raw_input("\nInsert the option number: ")
     	try:
     		Option = int(Option)
@@ -288,6 +341,6 @@ def optInputs():
 #                 except
 #                     raise ServerError("Server seems died.")
 #             loopServer = Server(value)
-#             _start(loopServer.name)
+#             start(loopServer.name)
 #         else:
 #             raise DsmmError("selServer must be None.")
