@@ -158,7 +158,7 @@ class Server(object):
 
     def __init__(self, name, initialize = True):
         self.id = config["Servers"][name]["ID"]
-        self.name = config["Servers"][name]["Name"]
+        self.name = name.lowercase
         self.minRam = config["Servers"][name]["MinRAM"]
         self.maxRam = config["Servers"][name]["MaxRAM"]
         self.fileName = config["Servers"][name]["FileName"]
