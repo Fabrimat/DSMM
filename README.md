@@ -14,7 +14,7 @@ When you start it you have to choose what to do and the program will do everythi
 * Linux.
 * Python2.
 * <a href="https://www.gnu.org/software/screen/">Screen</a>.
-* <a href="http://pyyaml.org/">Yaml</a>.
+* <a href="http://pyyaml.org/">PyYaml</a>.
 
 ## Help needed
 You can help me by <a href="https://github.com/Fabrimat/DSMM/issues">proposing improvements or reporting bugs</a>.
