@@ -143,18 +143,20 @@ class Screen(object):
         return "<%s '%s'>" % (self.__class__.__name__, self.name)
 
 class ScreenNotFoundError(Exception):
+
     @Override
     def __init__(self, value):
         self.value = value
+
     @Override
     def __str__(self):
         return repr(self.value)
 
 class Server(object):
 
-    configVersion = config["ConfigInfo"]["Version"]
-
+    configVersion = config["ProgramSettings"]["Version"]
     avaiableServers = config["Servers"]
+    checkRunningTime = config["ProgramSettings"]["CheckRunningTime"]
 
     def __init__(self, name, initialize = True):
         self.id = config["Servers"][name]["ID"]
@@ -170,8 +172,10 @@ class Server(object):
         self.runningInfo = serverStatus.lookup("{0}:{1}".format(self.serverIp,self.port))
         if initialize:
             self.screen = self._initialize()
+            if not self.checkRunning(2):
+                raise DsmmError("Unable to initialize")
         else:
-            self.screen = None
+            self.screen = Screen(self.name)
         return
 
     def checkStatus(self):
@@ -217,35 +221,53 @@ class Server(object):
                     retValue = 0
         return retValue
 
-    def _checkRunning(self, goal):
-        startCheckingTime = 0
-        while serverStarted < 120:
-            sleep(0.5)
-            if self.checkStatus() is goal:
-                startCheckingTime = 121
-            startCheckingTime += 1
-        if startCheckingTime is 121:
-            retValue = True
-        else:
-            retValue =  False
+    def checkRunning(self, goal):
+        print "Checking the server Status"
+        print "Press Ctrl+C to interrupt."
+        print "This may take a while"
+        try:
+            startCheckingTime = 0
+            dots = 0
+            while serverStarted < checkRunningTime*2:
+                if dots < 3:
+                    sys.stdout.write(".")
+                    sys.stdout.flush()
+                else:
+                    sys.stdout.write('\b\b\b')
+                    dots = 0
+                sleep(0.5)
+                if self.checkStatus() is goal:
+                    startCheckingTime = (checkRunningTime*2)+1
+                else:
+                    startCheckingTime += 1
+            if startCheckingTime is (checkRunningTime*2)+1:
+                retValue = True
+            else:
+                retValue =  False
+        except KeyboardInterrupt:
+            print "You interrupted the process."
+            retValue = False
         return retValue
 
     def start(self, checkStarted = False):
         preServerStatus = self.checkStatus()
-        if preServerStatus == 3:
+        if preServerStatus == 0:
             self.screen.send_commands("cd %s".format(self.directory))
         	self.screen.send_commands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
                 self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
             if checkStarted:
-                serverIsRunning = self._checkRunning(1)
+                serverIsRunning = self.checkRunning(1)
                 tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
                 if serverIsRunning:
                     tempFile.write("1:1:1:1")
                     print "Started"
+                    retValue = True
                 else:
                     tempFile.write("1:1:0:1")
                     print "Something gone wrong"
+                    retValue =  False
                 tempFile.close()
+        return retValue
 
     def _initialize(self):
         tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
@@ -270,51 +292,120 @@ class Server(object):
                 self.screen.sendCommands(value)
                 sleep(0.3)
             if checkStopped:
-                serverIsRunning = self._checkRunning(0)
+                serverIsRunning = self.checkRunning(0)
                 if not serverIsRunning:
                     os.remove("DSMMFiles/{0}{1}.sdat".format(self.name,self.id))
-                    self.screen = None
                     print "Stopped"
+                    retValue =  True
                 else:
                     tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
                     tempFile.write("0:0:0:2")
                     tempFile.close()
                     print "Something gone wrong"
+                    retValue =  False
+        return retValue
 
     def openConsole(self):
         if self.checkStatus() is not 0:
             self.screen.openConsole()
+            retValue = True
+        else:
+            retValue = False
+        return retValue
+
 
     def kill(self):
         if self.screen.exist():
             self.screen.kill()
+            sleep(1.0)
             self.screen.sendCommands("exit")
             try:
                 self.checkStatus()
+                retValue = True
             except ServerError:
                 tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
                 tempFile.write("0:0:0:3")
                 tempFile.close()
                 print "Something gone wrong"
+                retValue = False
                 raise DsmmError("Error while killing.. Fix the Server sdat!")
             except DsmmError:
                 os.remove("DSMMFiles/{0}{1}.sdat".format(self.name,self.id))
                 pass
-        if screen.exist():
+        if self.screen.exist():
+            retValue = False
             DsmmError("The screen was not killed?")
+        return retValue
 
-def spinningCursor():
-    while True:
-        for cursor in '|/-\\':
-            yield cursor
+    def getInfo(self):
+        print "Name:", self.name
+        print "ID:", self.id
+        print "Minimum RAM:", self.minRam
+        print "Maximum RAM:", self.maxRam
+        print "Filename:", self.fileName
+        print "Directory:", self.directory
+        print "Stop Commands:"
+        for value in self.stopCommands:
+            print " -", value
+        print "IP:", self.serverIp
+        print "Port:", self.port
+        try:
+            tempInfo = self.runningInfo.status()
+            tempStatus = True
+        except
+            tempStatus = False
+        if tempStatus is True:
+            print "Status: Online"
+            print "Players:", tempStatus.players.online
+        else:
+            print "Status: Offline"
+            if self.screen is not None:
+                if self.screen.exist():
+                    print "Screen: Exist"
+                else:
+                    print "Screen: Error"
+            else:
+                print "Screen: Absent"
+        if os.path.isfile("DSMMFiles/{0}{1}.sdat".format(self.name,self.id)):
+            tempFile = os.open("DSMMFiles/{0}{1}.sdat", "r")
+            contentFile = tempFile.read()
+            tempFile.close()
+            print "File: Present"
+            print "File Content:", contentFile
+        else:
+            print "File: Absent"
 
-def printCursor():
-    spinner = spinningCursor()
-    while True:
-        stdout.write(spinner.next())
-        stdout.flush()
-        sleep(0.1)
-        stdout.write('\b')
+
+    def restart(self):
+        print "Trying to stop..."
+        stopped = self.stop()
+        if stopped is False:
+            print "Trying to kill..."
+            killed = self.kill()
+        sleep(1.0)
+        print "Trying to start..."
+        self.start()
+
+class DsmmError(Exception):
+
+    @Override
+    def __init__(self, value):
+        self.value = value
+
+    @Override
+    def __str__(self):
+        return repr(self.value)
+
+class ServerError(Exception):
+
+    @Override
+    def __init__(self, value):
+        self.value = value
+
+    @Override
+    def __str__(self):
+        return repr(self.value)
+
 
 def checkDir():
     if not os.chdir("DSMMFiles"):
@@ -348,22 +439,30 @@ def optInputs():
     	Option = raw_input("\nInsert the option number: ")
     	try:
     		Option = int(Option)
-            repeatLoop = False
-    	except:
+            if Option > 0 and Option < 11:
+                repeatLoop = False
+            else:
+                print "Error. You entered an invalid value."
+                repeatLoop = True
+    	except ValueError:
     		print "Error. You entered an invalid value."
             repeatLoop = True
 	return Option
 
-# def startAllServers():
-#     for value in avaiableServers:
-#         if selServer is None:
-#             if os.path.isfile("DSMMFiles/%s%i.sdat".format(value.name,value.id)):
-#                 try:
-#                     value.runningInfo.ping()
-#                     raise ServerError("Server is already running")
-#                 except
-#                     raise ServerError("Server seems died.")
-#             loopServer = Server(value)
-#             start(loopServer.name)
-#         else:
-#             raise DsmmError("selServer must be None.")
+def loopAllServers(goal):
+    retValue = 0
+    for value in Server.avaiableServers:
+        if value.checkStatus() is not goal:
+            if goal is 0:
+                value.stop()
+            else if goal is 1:
+                value.start()
+            else if goal is 2:
+                Server(value, True)
+            else:
+                DsmmError("Goal not valid")
+    for value in Server.avaiableServers
+        if not value.checkRunning(goal):
+            retValue += 1
+    #logging.error("{0} server are not in the correct state!".format(retValue))
+    return retValue
