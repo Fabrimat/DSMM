@@ -27,13 +27,17 @@ Servers:
     # Actually non working
     Port: 25565
   Lobby:
-    Name: Lobby
-    Ram: 2048M
+    ID: 1
+    MinRAM: 2048M
+    MaxRAM: 2048M
     File_Name: spigot.jar
     Directory: /home/server/lobby
-    Stop_Command: stop
+    StopCommands:
+        - save-all
+        - stop
     Description: 'The default connection server'
     Server_Ip: 0.0.0.0
     Port: 25566
-Program_Info:
+ProgramSettings:
+  CheckRunningTime: 60
   Version: 0.8 #Do not change it!
