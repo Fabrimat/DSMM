@@ -251,22 +251,28 @@ class Server(object):
 
     def start(self, checkStarted = False):
         preServerStatus = self.checkStatus()
-        if preServerStatus == 0:
-            self.screen.send_commands("cd %s".format(self.directory))
-        	self.screen.send_commands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
-                self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
-            if checkStarted:
-                serverIsRunning = self.checkRunning(1)
-                tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
-                if serverIsRunning:
-                    tempFile.write("1:1:1:1")
-                    print "Started"
-                    retValue = True
-                else:
-                    tempFile.write("1:1:0:1")
-                    print "Something gone wrong"
-                    retValue =  False
-                tempFile.close()
+        if preServerStatus is not 1:
+            if preServerStatus is 0:
+                self.initialize()
+            if preServerStatus is 2:
+                self.screen.send_commands("cd %s".format(self.directory))
+            	self.screen.send_commands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
+                    self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
+                if checkStarted:
+                    serverIsRunning = self.checkRunning(1)
+                    tempFile = os.open("DSMMFiles/{0}{1}.sdat", 'w+'.format(self.name,self.id))
+                    if serverIsRunning:
+                        tempFile.write("1:1:1:1")
+                        print "Started"
+                        retValue = True
+                    else:
+                        tempFile.write("1:1:0:1")
+                        print "Something gone wrong"
+                        retValue =  False
+                    tempFile.close()
+        else:
+            print "Server is already running."
+            retValue = True
         return retValue
 
     def _initialize(self):
@@ -416,15 +422,14 @@ def clearScreen():
 	return
 
 def programInfo():
-	print "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
-	return "Please enter the inputs and don't leave them empty."
+	return "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
 
 def optInputs():
 	#The start function, choose what to do
     repeatLoop = True
     while errorLoop == True
     	ClearScreen()
-    	print ProgramInfo(),"\n"
+        print "Please enter the inputs and don't leave them empty.\n"
     	print "Options:"
     	print "1 - Start"
     	print "2 - Open Console"
@@ -433,13 +438,14 @@ def optInputs():
     	print "5 - Restart"
     	print "6 - Kill"
     	print "7 - Get infos."
-    	print "8 - List all running servers."
+    	print "8 - Servers status."
         print "9 - Fix"
-    	print "10 - Exit."
-    	Option = raw_input("\nInsert the option number: ")
+        print "10 - Show License"
+    	print "11 - Exit."
+    	option = raw_input("\nInsert the option number: ")
     	try:
-    		Option = int(Option)
-            if Option > 0 and Option < 11:
+    		option = int(option)
+            if option > 0 and option < 12:
                 repeatLoop = False
             else:
                 print "Error. You entered an invalid value."
@@ -447,22 +453,120 @@ def optInputs():
     	except ValueError:
     		print "Error. You entered an invalid value."
             repeatLoop = True
-	return Option
+	return option
+
+def optionSwitch(option):
+    if option is 1:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer, True)
+        tempServer.start()
+    else if option is 2:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.openConsole()
+    else if option is 3:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.screen.sendCommands()
+    else if option is 4:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.stop()
+    else if option is 5:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.restart()
+    else if option is 6:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.kill()
+    else if option is 7:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.getInfo()
+    else if option is 8:
+        statusServers()
+    else if option is 9:
+        print "The fixing tool is not implemented yet"
+    else if option is 10:
+        print "The License is not implemented yet"
+    else if option is 11:
+        appExit()
+    else:
+        raise DsmmError("Invalid value")
+
 
 def loopAllServers(goal):
     retValue = 0
     for value in Server.avaiableServers:
-        if value.checkStatus() is not goal:
+        tempServer = Server(value)
+        if tempServer.checkStatus() is not goal:
             if goal is 0:
-                value.stop()
+                tempServer.stop()
             else if goal is 1:
-                value.start()
+                tempServer.start()
             else if goal is 2:
-                Server(value, True)
+                Server(tempServer, True)
             else:
                 DsmmError("Goal not valid")
     for value in Server.avaiableServers
-        if not value.checkRunning(goal):
+        tempServer = Server(value)
+        if not tempServer.checkRunning(goal):
             retValue += 1
-    #logging.error("{0} server are not in the correct state!".format(retValue))
+    if reValue is not 0:
+        #logging.error("{0} server are not in the correct state!".format(retValue))
+        print "{0} servers are not in the correct state!".format(retValue)
     return retValue
+
+def chooseServer():
+    repeatLoop = True
+    counter = 1
+    while repeatLoop is True:
+        print "Choose the server:"
+        for value in Server.avaiableServers:
+            print "{0} - {1}".format(counter, value)
+            counter += 1
+
+        option = raw_input("Insert the value: ")
+        try:
+            option = int(option)
+            if option > 0 and option < counter:
+                repeatLoop = False
+            else:
+                repeatLoop = True
+        except ValueError:
+            print "Error. You entered an invalid value."
+            repeatLoop = True
+    counter = 1
+    for value in Server.avaiableServers:
+        if counter is option:
+            retValue = value
+            break
+    return retValue
+
+def statusServers():
+    print "Server \tStatus"
+    for value in avaiableServers:
+        tempServer = Server(value)
+        tempStatus = tempServer.checkStatus
+        if tempStatus is 0:
+            print "{0} \tOffline".format(value)
+        if tempStatus is 1:
+            print "{0} \tOnline".format(value)
+        if tempStatus is 2:
+            print "{0} \tInitialized".format(value)
+        else:
+            raise DsmmError("Status not valid.")
+
+def appExit():
+	print "\nExiting.."
+	exit()
+
+def main():
+    while True:
+        programInfo()
+        option = OptChoose()
+        optionSwitch(option)
+
+if __name__ == "__main__":
+	main()
