@@ -1,38 +1,44 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 '''
-	DSMM v0.8 - Dedicaded Server Minecraft Manager
+	DSMM v2.0 - Dedicaded Server Minecraft Manager
 	Author: Fabrimat
 	Repository: https://github.com/Fabrimat/DSMM
 '''
 
 __author__ = "Fabrimat"
 __license__ = "GPL"
-__version__ = "1.0"
+__version__ = "2.0"
 __maintainer__ = "Fabrimat"
 __email__ = "lr.fabrizio@gmail.com"
 __status__ = "Development"
 
-from sys import exit
-from os import name
+from sys import exit as sExit
+import sys
+from os import name as osName
 #import logging
-if name != "posix":
+if osName != "posix":
 	exit("\nOS not supported.\n")
 	#logging.error("%s not supported.", os.name)
 from subprocess import call
-from threading import Thread
+from threading import Thread as thread
 from os import system
+import os.path
 from time import sleep
 try:
-    from commands import getoutput
+    from commands import getoutput as getOutput
 except:
-    from subprocess import getoutput
+    from subprocess import getoutput as getOutput
 
 # Third party
 import yaml
+from mcstatus import MinecraftServer as serverStatus
 
 #Import the config
 config = yaml.load(open('config.yml', 'r'))
+configVersion = config["ProgramSettings"]["Version"]
+avaiableServers = config["Servers"]
+checkRunningTime = config["ProgramSettings"]["CheckRunningTime"]
 
 # Console colors
 W = '\033[0m'    # (normal)
@@ -45,9 +51,6 @@ C = '\033[36m'   # cyan
 GR = '\033[37m'  # gray
 T = '\033[93m'   # tan
 
-# Screenutils library
-# Repository: https://github.com/Christophe31/screenutils
-
 def list_screens():
     """List all the existing screens and build a Screen instance for each
     """
@@ -59,7 +62,7 @@ def list_screens():
 
 class Screen(object):
 
-    def __init__(self, name, initialize=False):
+    def __init__(self, name, initialize = False):
         self.name = name
         self._id = None
         self._status = None
@@ -69,75 +72,63 @@ class Screen(object):
 
     @property
     def id(self):
-        """return the identifier of the screen as string"""
         if not self._id:
-            self._set_screen_infos()
+            self._setScreenInfos()
         return self._id
 
     @property
     def status(self):
-        """return the status of the screen as string"""
-        self._set_screen_infos()
+        self._setScreenInfos()
         return self._status
 
     @property
     def exists(self):
-        """Tell if the screen session exists or not."""
-        # Parse the screen -ls call, to find if the screen exists or not.
-        # The screen -ls | grep name returns something like that:
-        #  "	28062.G.Terminal	(Detached)"
-        lines = getoutput("screen -ls | grep " + self.name).split('\n')
+        lines = getOutput("screen -ls | grep " + self.name).split('\n')
         return self.name in [".".join(l.split(".")[1:]).split("\t")[0]
                              for l in lines]
 
     def initialize(self):
         """initialize a screen, if does not exists yet"""
         if not self.exists:
-            self._id=None
-            # Detach the screen once attached, on a new tread.
-            Thread(target=self._delayed_detach).start()
-            # support Unicode (-U),
-            # attach to a new/existing named screen (-R).
+            self._id = None
+            thread(target=self._delayedDetach).start()
             system('screen -UR ' + self.name)
 
     def interrupt(self):
         """Insert CTRL+C in the screen session"""
-        self._screen_commands("eval \"stuff \\003\"")
+        self._screenCommands("eval \"stuff \\003\"")
 
     def kill(self):
-        """Kill the screen applications then close the screen"""
-        self._screen_commands('quit')
+        self._screenCommands('quit')
 
     def detach(self):
-        """detach the screen"""
-        self._check_exists()
+        self._checkExists()
         system("screen -d " + self.name)
 
-    def send_commands(self, *commands):
-        """send commands to the active gnu-screen"""
-        self._check_exists()
+    def sendCommands(self, *commands):
+        self._checkExists()
         for command in commands:
-            self._screen_commands( 'stuff "' + command + '" ' ,
+            self._screenCommands( 'stuff "' + command + '" ' ,
                                    'eval "stuff \\015"' )
 
-    def add_user_access(self, unix_user_name):
-        """allow to share your session with an other unix user"""
-        self._screen_commands('multiuser on', 'acladd ' + unix_user_name)
+    def openConsole(self):
+        self._checkExists()
+        system("screen  -U -r " + self.name)
 
-    def _screen_commands(self, *commands):
-        """allow to insert generic screen specific commands
-        a glossary of the existing screen command in `man screen`"""
-        self._check_exists()
+    def addUserAccess(self, unixUserName):
+        self._screenCommands('multiuser on', 'acladd ' + unixUserName)
+
+    def _screenCommands(self, *commands):
+        self._checkExists()
         for command in commands:
             system('screen -x ' + self.name + ' -X ' + command)
             sleep(0.02)
 
-    def _check_exists(self, message="Error code: 404"):
-        """check whereas the screen exist. if not, raise an exception"""
+    def _checkExists(self, message = "Error code: 404"):
         if not self.exists:
             raise ScreenNotFoundError(message)
 
-    def _set_screen_infos(self):
+    def _setScreenInfos(self):
         """set the screen information related parameters"""
         if self.exists:
             infos = getoutput("screen -ls | grep %s" % self.name).split('\t')[1:]
@@ -148,7 +139,7 @@ class Screen(object):
             else:
                 self._status = infos[1][1:-1]
 
-    def _delayed_detach(self):
+    def _delayedDetach(self):
         sleep(0.5)
         self.detach()
 
@@ -156,276 +147,426 @@ class Screen(object):
         return "<%s '%s'>" % (self.__class__.__name__, self.name)
 
 class ScreenNotFoundError(Exception):
-    """raised when the screen does not exists"""
 
-# Finish of screenutils
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+class Server(object):
+
+    def __init__(self, name, initialize = False):
+        self.id = config["Servers"][name]["ID"]
+        self.name = name
+        self.minRam = config["Servers"][name]["MinRAM"]
+        self.maxRam = config["Servers"][name]["MaxRAM"]
+        self.fileName = config["Servers"][name]["FileName"]
+        self.directory = config["Servers"][name]["Directory"]
+        self.stopCommands = config["Servers"][name]["StopCommands"]
+        self.description = config["Servers"][name]["Description"]
+        self.serverIp = config["Servers"][name]["IP"]
+        self.port = config["Servers"][name]["Port"]
+        self.runningInfo = serverStatus.lookup("{0}:{1}".format(self.serverIp,self.port))
+        if initialize:
+            self._initialize()
+            if not self.checkRunning(2):
+                raise DsmmError("Unable to initialize")
+        else:
+            self.screen = Screen(self.name)
+        return
+
+    def checkStatus(self):
+        # 0 = NOT RUNNING , 1 = INITILIZED, 2 = RUNNING
+		retValue = 0
+		if os.path.isfile("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id)):
+			tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), "r")
+			contentFile = tempFile.read()
+			tempFile.close()
+			# Screen:Server:Checked:(Init=0,Start=1,Stop=2,Kill=3)
+			contentFile = contentFile.split(":")
+			i = 0
+			for value in contentFile:
+				contentFile[i]  = int(value)
+				i += 1
+			#contentFile = int(contentFile)
+			if contentFile[0] is 1:
+				if contentFile[1] is 1:
+					try:
+						self.runningInfo.status()
+						retValue =  1
+					except:
+						raise ServerError("The remote server is not responding.")
+				else:
+					if self.screen.exists:
+						retValue =  2
+					else:
+						raise DsmmError("Screen should exist? Try to fix it!")
+			else:
+				try:
+					self.runningInfo.status()
+					raise DsmmError("Server shouldn't be running!")
+				except:
+					DsmmError("There shoudn't be the file!")
+		else:
+			if self.screen.exists:
+				try:
+					self.runningInfo.status()
+					raise DsmmError("The Screen and the Server are running without the file?")
+				except:
+					raise DsmmError("The Screen is running without the file?")
+			else:
+				try:
+					self.runningInfo.status()
+					raise DsmmError("The Server is running without the file?")
+				except:
+					retValue = 0
+		return retValue
+
+    def checkRunning(self, goal):
+		print "Checking the server Status"
+		print "Press Ctrl+C to interrupt."
+		print "This may take a while"
+		# try:
+		goalCheckingTime = 0
+		# dots = 0
+		while goalCheckingTime < checkRunningTime*2:
+			# if dots < 3:
+			# 	sys.stdout.write(".")
+			# 	sys.stdout.flush()
+			# else:
+            #     sys.stdout.write('\b\b\b')
+			# 	dots = 0
+			sys.stdout.write(".")
+			sys.stdout.flush()
+			sleep(0.5)
+			if self.checkStatus() is goal:
+				goalCheckingTime = (checkRunningTime*2)+1
+			else:
+				goalCheckingTime += 1
+		if goalCheckingTime is (checkRunningTime*2)+1:
+			retValue = True
+		else:
+			retValue =  False
+		# except KeyboardInterrupt:
+		# 	print "You interrupted the process."
+		# 	retValue = False
+		# except:
+		# 	print "Unexpected error:", sys.exc_info()[0]
+		# 	raise
+		return retValue
+
+    def start(self, checkStarted = False):
+        retValue = False
+        preServerStatus = self.checkStatus()
+        if preServerStatus is not 1:
+            if preServerStatus is 0:
+                self.initialize()
+            if preServerStatus is 2:
+                self.screen.sendCommands("cd %s".format(self.directory))
+            	self.screen.sendCommands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
+                    self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
+                if checkStarted:
+                    serverIsRunning = self.checkRunning(1)
+                    tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), 'w+')
+                    if serverIsRunning:
+                        tempFile.write("1:1:1:1")
+                        print "Started"
+                        retValue = True
+                    else:
+                        tempFile.write("1:1:0:1")
+                        print "Something gone wrong"
+                        retValue =  False
+                    tempFile.close()
+        else:
+            print "Server is already running."
+            retValue = True
+        return retValue
+
+    def _initialize(self):
+        tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), 'w+')
+        self.screen = Screen(self.name, True)
+        if self.screen.exists:
+            tempFile.write("1:0:1:0")
+        else:
+            tempFile.write("1:0:0:0")
+            DsmmError("Could not initialize!")
+        tempFile.close()
+
+    def stop(self, checkStopped = False):
+        preServerStatus = self.checkStatus()
+        if preServerStatus is 0:
+            print "Server is not running."
+        elif preServerStatus is 1:
+            self.screen.sendCommands("exit")
+        elif preServerStatus is 2:
+            print "Stopping..."
+            for value in self.stopCommands:
+                self.screen.sendCommands(value)
+                sleep(0.3)
+            if checkStopped:
+                serverIsRunning = self.checkRunning(0)
+                if not serverIsRunning:
+                    os.remove("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id))
+                    print "Stopped"
+                    retValue =  True
+                else:
+                    tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), 'w+')
+                    tempFile.write("0:0:0:2")
+                    tempFile.close()
+                    print "Something gone wrong"
+                    retValue =  False
+        return retValue
+
+    def openConsole(self):
+        if self.checkStatus() is not 0:
+            self.screen.openConsole()
+            retValue = True
+        else:
+            retValue = False
+        return retValue
 
 
-def ClearScreen():
+    def kill(self):
+        if self.screen.exist():
+            self.screen.kill()
+            sleep(1.0)
+            self.screen.sendCommands("exit")
+            try:
+                self.checkStatus()
+                retValue = True
+            except ServerError:
+                tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), 'w+')
+                tempFile.write("0:0:0:3")
+                tempFile.close()
+                print "Something gone wrong"
+                retValue = False
+                raise DsmmError("Error while killing.. Fix the Server sdat!")
+            except DsmmError:
+                os.remove("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id))
+                pass
+        if self.screen.exist():
+            retValue = False
+            DsmmError("The screen was not killed?")
+        return retValue
+
+    def getInfo(self):
+        print "Name:", self.name
+        print "ID:", self.id
+        print "Minimum RAM:", self.minRam
+        print "Maximum RAM:", self.maxRam
+        print "Filename:", self.fileName
+        print "Directory:", self.directory
+        print "Stop Commands:"
+        for value in self.stopCommands:
+            print " -", value
+        print "IP:", self.serverIp
+        print "Port:", self.port
+        try:
+            tempInfo = self.runningInfo.status()
+            tempStatus = True
+        except:
+            tempStatus = False
+        if tempStatus is True:
+            print "Status: Online"
+            print "Players:", tempStatus.players.online
+        else:
+            print "Status: Offline"
+            if self.screen.exists:
+                print "Screen: Present"
+            else:
+                print "Screen: Absent"
+        if os.path.isfile("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id)):
+            tempFile = open("DSMMFiles/{0}-{1}.sdat", "r")
+            contentFile = tempFile.read()
+            tempFile.close()
+            print "File: Present"
+            print "File Content:", contentFile
+        else:
+            print "File: Absent"
+
+
+    def restart(self):
+        print "Trying to stop..."
+        stopped = self.stop()
+        if stopped is False:
+            print "Trying to kill..."
+            killed = self.kill()
+        sleep(1.0)
+        print "Trying to start..."
+        self.start()
+
+class DsmmError(Exception):
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+class ServerError(Exception):
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
+def checkDir():
+    if not os.chdir("DSMMFiles"):
+        os.mkdir("DSMMFiles")
+
+def clearScreen():
 	call('clear', shell = True)
 	return
 
-def ProgramInfo():
-	print "DSMM v" + __version__ + " - Dedicaded Server Minecraft Manager by " + __author__
-	return "Please enter the inputs and don't leave them empty."
+def programInfo():
+	return "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
 
-def OptInputs():
+def optInputs():
 	#The start function, choose what to do
-	ClearScreen()
-	print ProgramInfo(),"\n"
-	print "Options:"
-	print "1 - Start server."
-	print "2 - Open a server console."
-	print "3 - Send a command to a server."
-	print "4 - Stop server."
-	print "5 - Restart a server."
-	print "6 - Kill a server."
-	print "7 - Get server infos."
-	print "8 - List all running servers."
-	print "9 - Exit."
-	Option = raw_input("\nInsert the option number: ")
-	try:
-		Option = int(Option)
-	except:
-		AppExit("Error. You entered an invalid value.")
-	return Option
+    repeatLoop = True
+    while repeatLoop is True:
+    	clearScreen()
+        print "Please enter the inputs and don't leave them empty.\n"
+    	print "Options:"
+    	print "1 - Start"
+    	print "2 - Open Console"
+    	print "3 - Send Command"
+    	print "4 - Stop"
+    	print "5 - Restart"
+    	print "6 - Kill"
+    	print "7 - Get infos."
+    	print "8 - Servers status."
+        print "9 - Fix"
+        print "10 - Show License"
+    	print "11 - Exit."
+    	option = raw_input("\nInsert the option number: ")
+    	try:
+            option = int(option)
+            if option > 0 and option < 12:
+				repeatLoop = False
+            else:
+                print "Error. You entered an invalid value."
+                repeatLoop = True
+    	except ValueError:
+			print "Error. You entered an invalid value."
+			repeatLoop = True
+	return option
 
-def ServerList():
-	print "The avaiable server are:"
-	for data in config["servers"]:
-		print data
-	return
+def optionSwitch(option):
+    if option is 1:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer, True)
+        tempServer.start(True)
+    elif option is 2:
+		valueServer = chooseServer()
+		tempServer = Server(valueServer)
+		tempServer.openConsole()
+    elif option is 3:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.screen.sendCommands()
+    elif option is 4:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.stop()
+    elif option is 5:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.restart()
+    elif option is 6:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.kill()
+    elif option is 7:
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.getInfo()
+    elif option is 8:
+        statusServers()
+    elif option is 9:
+        print "The fixing tool is not implemented yet"
+    elif option is 10:
+        print "The License is not implemented yet"
+    elif option is 11:
+        appExit()
+    else:
+        raise DsmmError("Invalid value")
 
-def ErrorCheck(Option):
-	#Check if the option is valid
-	if Option < 1 and Option > 9:
-		exit("Invalid Option")
-	return
 
+def loopAllServers(goal):
+    retValue = 0
+    for value in Server.avaiableServers:
+        tempServer = Server(value)
+        if tempServer.checkStatus() is not goal:
+            if goal is 0:
+                tempServer.stop()
+            elif goal is 1:
+                tempServer.start()
+            elif goal is 2:
+                Server(tempServer, True)
+            else:
+                DsmmError("Goal not valid")
+    for value in avaiableServers:
+        tempServer = Server(value)
+        if not tempServer.checkRunning(goal):
+            retValue += 1
+    if reValue is not 0:
+        #logging.error("{0} server are not in the correct state!".format(retValue))
+        print "{0} servers are not in the correct state!".format(retValue)
+    return retValue
 
-def InputServerName():
-	#Insert the Server Name and validate it.
-	InvName = True
-	PrintHelp = False
-	ServerName = "NULL"
-	ScreenName = "NULL"
-	while InvName == True:  # Loop for QuestClose
-		ValidName = False
-		ServerName = raw_input("Insert the server name: ")
-		print ""
-		if ServerName == "help" or ServerName == "Help":
-			ServerList()
-			PrintHelp = True
-			InvName = True
-		else:
-			for data in config["Servers"]:
-				if ServerName == data:  # Check if servername is valid
-					ScreenName = Screen(ServerName)
-					InvName = False
-					break
-				else:
-					InvName = True
-		if InvName == True and PrintHelp == False:
-			print 'Invalid name. Type "help" for the list.'
-	return ServerName
+def chooseServer():
+    repeatLoop = True
+    counter = 1
+    while repeatLoop is True:
+        print "Choose the server:"
+        for value in avaiableServers:
+            print "{0} - {1}".format(counter, value)
+            counter += 1
 
-def GetServerInfo(ServerName):
-	Name = config["Servers"][ServerName]["Name"]
-	ScreenName = Screen(Name)
-	Ram = config["Servers"][ServerName]["Ram"]
-	FileName = config["Servers"][ServerName]["File_Name"]
-	Directory = config["Servers"][ServerName]["Directory"]
-	StopCommand = config["Servers"][ServerName]["Stop_Command"]
-	Description = config["Servers"][ServerName]["Description"]
-	ServerPort = config["Servers"][ServerName]["Port"]
-	ServerIPListen = config["Servers"][ServerName]["Server_Ip"]
-	return ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, Description, ServerPort, ServerIPListen
+        option = raw_input("Insert the value: ")
+        try:
+            option = int(option)
+            if option > 0 and option < counter:
+                repeatLoop = False
+            else:
+                repeatLoop = True
+        except ValueError:
+            print "Error. You entered an invalid value."
+            repeatLoop = True
+    counter = 1
+    for value in avaiableServers:
+        if counter is option:
+            retValue = value
+            break
+    return retValue
 
-def OptChoose(Option):
-	if Option == 1:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerStart(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], ServerInfo[8],  ServerInfo[9])
-	elif Option == 2:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerConsole(ServerInfo[1], ServerInfo[2])
-	elif Option == 3:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerCommand(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], ServerInfo[8],  ServerInfo[9])
-	elif Option == 4:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerStop(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], True)
-	elif Option == 5:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerRestart(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5], ServerInfo[6], ServerInfo[8],  ServerInfo[9])
-	elif Option == 6:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		ServerKill(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5])
-	elif Option == 7:
-		ServerName = InputServerName()
-		ServerInfo = GetServerInfo(ServerName)
-		SayHello(ServerInfo[0], ServerInfo[1], ServerInfo[2], ServerInfo[3], ServerInfo[4], ServerInfo[5],ServerInfo[6],ServerInfo[7], ServerInfo[8],  ServerInfo[9])
-	elif Option == 8:
-		ActServerList()
-	elif Option == 9:
-		AppExit()
-	return
+def statusServers():
+    print "Server \tStatus"
+    for value in avaiableServers:
+        tempServer = Server(value)
+        tempStatus = tempServer.checkStatus()
+        if tempStatus is 0:
+            print "{0} \tOffline".format(value)
+        elif tempStatus is 1:
+            print "{0} \tOnline".format(value)
+        elif tempStatus is 2:
+            print "{0} \tInitialized".format(value)
+        else:
+            raise DsmmError("Status not valid.")
 
-def ServerStart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen):
-	if ScreenName.exists:
-		while True: #Loop for QuestClose
-			QuestClose=raw_input("The Screen is already active, would you like to stop it? (y/n) - ")
-			if QuestClose == "y":
-				ServerStop(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, False)
-				break
-			elif QuestClose == "n":
-				AppExit()
-			else:
-				print "Invalid input."
-	ScreenName = Screen(Name, True)
-	ScreenName.send_commands("cd " + Directory)
-	ScreenName.send_commands('java -Xmx' + Ram + ' -Xms' + Ram + ' -jar ' + FileName + ' -p ' + str(ServerPort) + ' -ip ' + ServerIPListen)
-	ClearScreen()
-	print"\nServer successfully started!\n"
-	sleep(1)
-	AppExit()
-	return
-
-def ServerConsole(ScreenName, Name):
-	if ScreenName.exists:
-		ScreenName.detach()
-		system('screen -U -r ' + Name)
-		exit()
-	else:
-		print "The Screen is not running. Check if it's running with this user, otherwise start it."
-		raw_input("Press enter to continue...")
-		AppExit()
-	return
-
-def ServerCommand(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen):
-	if not ScreenName.exists:
-		print "The Screen is not running. Check if it's running with this user, otherwise start it."
-		raw_input("Press enter to continue...")
-		AppExit()
-	#AppExit("Server Command to complete.")
-	SendCommand = raw_input("Insert the commnd to send: ")
-	ScreenName.send_commands(SendCommand)
-	sleep(0.4)
-	QuestOpen = raw_input("Command sent. Would you like to open the screen? (y/n) - ")
-	if QuestOpen == "y":
-		ServerConsole(ScreenName, Name)
-	elif QuestOpen == "n":
-		AppExit()
-	else:
-		AppExit("Error. You entered an invalid value.")
-	return
-
-def ServerStop(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ExitValue):
-	if ScreenName.exists:
-		ScreenName.send_commands(StopCommand)
-		print"Sending the command..."
-		sleep(5)
-		ScreenName.send_commands("exit")
-		sleep(0.5)
-		if ScreenName.exists:
-			ScreenName.send_commands("exit")
-		print"Trying to close the screen..."
-		sleep(4.5)
-		if ScreenName.exists:
-			QuestOK = raw_input('The screen is not responding, would you like to open it or kill it? (o/k) - ')
-			if QuestOK == "o":
-				ServerConsole(ServerName, ScreenName, Name, Ram, FileName, Directory)
-			elif QuestOK == "k":
-				ServerKill(ServerName, ScreenName, Name, Ram, FileName, Directory)
-			else:
-				print "Invalid input."
-				raw_input("Press enter to continue...")
-				AppExit("Error. You entered an invalid value.")
-		else:
-			print"Screen successfully closed!"
-			sleep(2)
-			if ExitValue == True:
-				AppExit()
-	else:
-		print "The Screen is not running."
-		raw_input("Press enter to continue...")
-		AppExit()
-
-def ServerRestart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen):
-	ServerStop(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, False)
-	ServerStart(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, ServerPort, ServerIPListen)
-	return
-
-def ServerKill(ServerName, ScreenName, Name, Ram, FileName, Directory):
-	ScreenName.interrupt()
-	sleep(1)
-	ScreenName.kill()
-	if ScreenName.exists:
-		print "Impossible to kill the screen, kill it manually."
-		print 'To kill it press "CTRL+A" and then "K".'
-		raw_input("Press Enter to open the screen...")
-		ServerConsole(ServerName, ScreenName, Name, Ram, FileName, Directory)
-	print "Screen killed successfully!"
-	AppExit()
-	return
-
-def SayHello(ServerName, ScreenName, Name, Ram, FileName, Directory, StopCommand, Description, ServerPort, ServerIPListen):
-	print "\nHello user, here you are the informations of the server you selected:\n"
-	print "Name: ", ServerName
-	print "Ram : ", Ram
-	print "Filename: ", FileName
-	print "Directory: ", Directory
-	print "StopCommand: ", StopCommand
-	print "Description: ", Description
-	print "IP: ", ServerIPListen
-	print "Port: ", ServerPort
-	AppExit()
-
-def ActServerList():
-	ServerListCount = 0
-	for data in list_screens():
-		screenlist = str(data)
-		for data in config["Servers"]:
-			listname = config["Servers"][data]["name"]
-			ListServerCheck = "'" + listname + "'"
-			if ListServerCheck in screenlist:
-				ServerListCount = ServerListCount + 1
-	if ServerListCount == 0:
-		print "There are 0 servers running."
-	else:
-		print "There are " + str(ServerListCount) + " server running:\n"
-	ServerListCount = 0
-	for data in list_screens():
-		screenlist = str(data)
-		for data in config["Servers"]:
-			listname = config["Servers"][data]["Name"]
-			ListServerCheck = "'" + listname + "'"
-			if ListServerCheck in screenlist:
-				ServerListCount = ServerListCount + 1
-				print str(ServerListCount) + " - " + listname
-	AppExit()
-	return
-
-def AppExit(ExitError=None):
-	if ExitError is not None:
-		print "\n" + ExitError
-		exit("\nExiting..")
-	else:
-		print "\nExiting.."
-		exit()
-	return
+def appExit():
+	print "\nExiting.."
+	exit()
 
 def main():
-	try:
-		Option = OptInputs()
-		OptChoose(Option)
-	except KeyboardInterrupt:
-		exit("\n You pressed Ctrl+C")
+    while True:
+        programInfo()
+        option = optInputs()
+        optionSwitch(option)
 
 if __name__ == "__main__":
 	main()
