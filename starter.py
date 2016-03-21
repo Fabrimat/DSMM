@@ -243,7 +243,6 @@ class Server(object):
 			if self.checkStatus() is goal:
 				goalCheckingTime = (checkRunningTime*2)+1
 			else:
-				print self.checkStatus()
 				goalCheckingTime += 1
 		if goalCheckingTime is (checkRunningTime*2)+1:
 			retValue = True
@@ -373,11 +372,8 @@ class Server(object):
             print "Players:", tempStatus.players.online
         else:
             print "Status: Offline"
-            if self.screen is not None:
-                if self.screen.exist():
-                    print "Screen: Exist"
-                else:
-                    print "Screen: Error"
+            if self.screen.exists:
+                print "Screen: Present"
             else:
                 print "Screen: Absent"
         if os.path.isfile("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id)):
@@ -463,7 +459,7 @@ def optionSwitch(option):
     if option is 1:
         valueServer = chooseServer()
         tempServer = Server(valueServer, True)
-        tempServer.start()
+        tempServer.start(True)
     elif option is 2:
 		valueServer = chooseServer()
 		tempServer = Server(valueServer)
@@ -552,12 +548,12 @@ def statusServers():
     print "Server \tStatus"
     for value in avaiableServers:
         tempServer = Server(value)
-        tempStatus = tempServer.checkStatus
+        tempStatus = tempServer.checkStatus()
         if tempStatus is 0:
             print "{0} \tOffline".format(value)
-        if tempStatus is 1:
+        elif tempStatus is 1:
             print "{0} \tOnline".format(value)
-        if tempStatus is 2:
+        elif tempStatus is 2:
             print "{0} \tInitialized".format(value)
         else:
             raise DsmmError("Status not valid.")
