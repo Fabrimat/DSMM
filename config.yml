@@ -1,5 +1,5 @@
 ###################################################
-#	DSMM v0.8 - Dedicaded Server Minecraft Manager  #
+#	DSMM v2.0 - Dedicaded Server Minecraft Manager  #
 #	Author: Fabrimat                                #
 #	Repository: https://github.com/Fabrimat/DSMM    #
 ###################################################
@@ -10,34 +10,28 @@ Servers:
   # Here are some templates.
   # The name you will use in the program
   Bungeecord:
-    # The name of the screen
-    Name: Bungee
-    # The RAM in Java format
-    Ram: 512M
-    # The file.jar to execute
-    File_Name: BungeeCord.jar
-    # The directory where is located the file.jar
-    Directory: /home/server/bungee
-    # The command that is needed to stop the server
-    Stop_Command: end
-    # The description, write what you want
-    Description: 'The BungeeCord Network'
-    # The ip from where accepts connections
-    Server_Ip: 0.0.0.0
-    # Actually non working
+    ID: 1
+    MinRAM: 256M
+    MaxRAM: 512M
+    FileName: bungeecord.jar
+    Directory: /home/server/bungeecord
+    StopCommands:
+        - end
+    Description: 'The Bungeecord Proxy'
+    IP: 0.0.0.0
     Port: 25565
   Lobby:
-    ID: 1
+    ID: 2
     MinRAM: 2048M
     MaxRAM: 2048M
-    File_Name: spigot.jar
+    FileName: spigot.jar
     Directory: /home/server/lobby
     StopCommands:
         - save-all
         - stop
     Description: 'The default connection server'
-    Server_Ip: 0.0.0.0
+    IP: 0.0.0.0
     Port: 25566
 ProgramSettings:
   CheckRunningTime: 60
-  Version: 0.8 #Do not change it!
+  Version: 2.0 #Do not change it!
