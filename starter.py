@@ -193,7 +193,7 @@ class Server(object):
                     try:
                         self.runningInfo.status()
                         retValue =  2
-                    except
+                    except:
                         raise ServerError("The remote server is not responding.")
                 else:
                     if self.screen.exist():
@@ -204,20 +204,20 @@ class Server(object):
                 try:
                     self.runningInfo.status()
                     raise DsmmError("Server shouldn't be running!")
-                except
+                except:
                     DsmmError("There shoudn't be the file!")
         else:
             if self.screen.exist():
                 try:
                     self.runningInfo.status()
                     raise DsmmError("The Screen and the Server are running without the file?")
-                except
+                except:
                     raise DsmmError("The Screen is running without the file?")
             else:
                 try:
                     self.runningInfo.status()
                     raise DsmmError("The Server is running without the file?")
-                except
+                except:
                     retValue = 0
         return retValue
 
@@ -290,9 +290,9 @@ class Server(object):
         preServerStatus = self.checkStatus()
         if preServerStatus is 0:
             print "Server is not running."
-        else if preServerStatus is 1:
+        elif preServerStatus is 1:
             self.screen.sendCommands("exit")
-        else if preServerStatus is 2:
+        elif preServerStatus is 2:
             print "Stopping..."
             for value in self.stopCommands:
                 self.screen.sendCommands(value)
@@ -358,7 +358,7 @@ class Server(object):
         try:
             tempInfo = self.runningInfo.status()
             tempStatus = True
-        except
+        except:
             tempStatus = False
         if tempStatus is True:
             print "Status: Online"
@@ -427,7 +427,7 @@ def programInfo():
 def optInputs():
 	#The start function, choose what to do
     repeatLoop = True
-    while errorLoop == True
+    while errorLoop is True:
     	ClearScreen()
         print "Please enter the inputs and don't leave them empty.\n"
     	print "Options:"
