@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 '''
-	DSMM v2.0 - Dedicaded Server Minecraft Manager
-	Author: Fabrimat
-	Repository: https://github.com/Fabrimat/DSMM
+    DSMM v2.0 - Dedicaded Server Minecraft Manager
+    Author: Fabrimat
+    Repository: https://github.com/Fabrimat/DSMM
 '''
 
 __author__ = "Fabrimat"
@@ -18,8 +18,8 @@ import sys
 from os import name as osName
 #import logging
 if osName != "posix":
-	exit("\nOS not supported.\n")
-	#logging.error("%s not supported.", os.name)
+    exit("\nOS not supported.\n")
+    #logging.error("%s not supported.", os.name)
 from subprocess import call
 from threading import Thread as thread
 from os import system
@@ -178,83 +178,89 @@ class Server(object):
 
     def checkStatus(self):
         # 0 = NOT RUNNING , 1 = INITILIZED, 2 = RUNNING
-		retValue = 0
-		if os.path.isfile("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id)):
-			tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), "r")
-			contentFile = tempFile.read()
-			tempFile.close()
-			# Screen:Server:Checked:(Init=0,Start=1,Stop=2,Kill=3)
-			contentFile = contentFile.split(":")
-			i = 0
-			for value in contentFile:
-				contentFile[i]  = int(value)
-				i += 1
-			#contentFile = int(contentFile)
-			if contentFile[0] is 1:
-				if contentFile[1] is 1:
-					try:
-						self.runningInfo.status()
-						retValue =  1
-					except:
-						raise ServerError("The remote server is not responding.")
-				else:
-					if self.screen.exists:
-						retValue =  2
-					else:
-						raise DsmmError("Screen should exist? Try to fix it!")
-			else:
-				try:
-					self.runningInfo.status()
-					raise DsmmError("Server shouldn't be running!")
-				except:
-					DsmmError("There shoudn't be the file!")
-		else:
-			if self.screen.exists:
-				try:
-					self.runningInfo.status()
-					raise DsmmError("The Screen and the Server are running without the file?")
-				except:
-					raise DsmmError("The Screen is running without the file?")
-			else:
-				try:
-					self.runningInfo.status()
-					raise DsmmError("The Server is running without the file?")
-				except:
-					retValue = 0
-		return retValue
+        retValue = 0
+        if os.path.isfile("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id)):
+            tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), "r")
+            contentFile = tempFile.read()
+            tempFile.close()
+            # Screen:Server:Checked:(Init=0,Start=1,Stop=2,Kill=3)
+            contentFile = contentFile.split(":")
+            i = 0
+            for value in contentFile:
+                contentFile[i]  = int(value)
+                i += 1
+            #contentFile = int(contentFile)
+            if contentFile[0] is 1:
+                if contentFile[1] is 1:
+                    try:
+                        self.runningInfo.status()
+                        retValue =  1
+                    except:
+                        raise ServerError("The remote server is not responding.")
+                else:
+                    if self.screen.exists:
+                        retValue =  2
+                    else:
+                        raise DsmmError("Screen should exist? Try to fix it!")
+            else:
+                try:
+                    self.runningInfo.status()
+                    raise DsmmError("Server shouldn't be running!")
+                except:
+                    DsmmError("There shoudn't be the file!")
+        else:
+            if self.screen.exists:
+                try:
+                    self.runningInfo.status()
+                    raise DsmmError("The Screen and the Server are running without the file?")
+                except:
+                    raise DsmmError("The Screen is running without the file?")
+            else:
+                try:
+                    self.runningInfo.status()
+                    raise DsmmError("The Server is running without the file?")
+                except:
+                    retValue = 0
+        return retValue
 
     def checkRunning(self, goal):
-		print "Checking the server Status"
-		print "Press Ctrl+C to interrupt."
-		print "This may take a while"
-		# try:
-		goalCheckingTime = 0
-		# dots = 0
-		while goalCheckingTime < checkRunningTime*2:
-			# if dots < 3:
-			# 	sys.stdout.write(".")
-			# 	sys.stdout.flush()
-			# else:
-            #     sys.stdout.write('\b\b\b')
-			# 	dots = 0
-			sys.stdout.write(".")
-			sys.stdout.flush()
-			sleep(0.5)
-			if self.checkStatus() is goal:
-				goalCheckingTime = (checkRunningTime*2)+1
-			else:
-				goalCheckingTime += 1
-		if goalCheckingTime is (checkRunningTime*2)+1:
-			retValue = True
-		else:
-			retValue =  False
-		# except KeyboardInterrupt:
-		# 	print "You interrupted the process."
-		# 	retValue = False
-		# except:
-		# 	print "Unexpected error:", sys.exc_info()[0]
-		# 	raise
-		return retValue
+        print "Checking the server Status"
+        print "Press Ctrl+C to interrupt."
+        print "This may take a while"
+        # try:
+        goalCheckingTime = 0
+        # dots = 0
+        try:
+            while goalCheckingTime < checkRunningTime*2:
+                # if dots < 3:
+                #     sys.stdout.write(".")
+                #     sys.stdout.flush()
+                # else:
+                #     sys.stdout.write('\b\b\b')
+                #     dots = 0
+                sys.stdout.write(".")
+                sys.stdout.flush()
+                sleep(0.5)
+                if self.checkStatus() is goal:
+                    goalCheckingTime = (checkRunningTime*2)+1
+                else:
+                    goalCheckingTime += 1
+            if goalCheckingTime is (checkRunningTime*2)+1:
+                retValue = True
+            else:
+                retValue =  False
+        except KeyboardInterrupt:
+            retValue = False
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            raise
+        # except KeyboardInterrupt:
+        #     print "You interrupted the process."
+        #     retValue = False
+        # except:
+        #     print "Unexpected error:", sys.exc_info()[0]
+        #     raise
+        return retValue
 
     def start(self, checkStarted = False):
         retValue = False
@@ -264,7 +270,7 @@ class Server(object):
                 self.initialize()
             if preServerStatus is 2:
                 self.screen.sendCommands("cd %s".format(self.directory))
-            	self.screen.sendCommands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
+                self.screen.sendCommands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
                     self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
                 if checkStarted:
                     serverIsRunning = self.checkRunning(1)
@@ -418,82 +424,83 @@ def checkDir():
         os.mkdir("DSMMFiles")
 
 def clearScreen():
-	call('clear', shell = True)
-	return
+    call('clear', shell = True)
+    return
 
 def programInfo():
-	return "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
+    return "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
 
 def optInputs():
-	#The start function, choose what to do
+    #The start function, choose what to do
     repeatLoop = True
     while repeatLoop is True:
-    	clearScreen()
+        clearScreen()
         print "Please enter the inputs and don't leave them empty.\n"
-    	print "Options:"
-    	print "1 - Start"
-    	print "2 - Open Console"
-    	print "3 - Send Command"
-    	print "4 - Stop"
-    	print "5 - Restart"
-    	print "6 - Kill"
-    	print "7 - Get infos."
-    	print "8 - Servers status."
+        print "Options:"
+        print "1 - Start"
+        print "2 - Open Console"
+        print "3 - Send Command"
+        print "4 - Stop"
+        print "5 - Restart"
+        print "6 - Kill"
+        print "7 - Get infos."
+        print "8 - Servers status."
         print "9 - Fix"
         print "10 - Show License"
-    	print "11 - Exit."
-    	option = raw_input("\nInsert the option number: ")
-    	try:
+        print "11 - Exit."
+        option = raw_input("\nInsert the option number: ")
+        try:
             option = int(option)
             if option > 0 and option < 12:
-				repeatLoop = False
+                repeatLoop = False
             else:
                 print "Error. You entered an invalid value."
                 repeatLoop = True
-    	except ValueError:
-			print "Error. You entered an invalid value."
-			repeatLoop = True
-	return option
+        except ValueError:
+            print "Error. You entered an invalid value."
+            repeatLoop = True
+    return option
 
 def optionSwitch(option):
-    if option is 1:
+    if option is 1: # Start
         valueServer = chooseServer()
         tempServer = Server(valueServer, True)
         tempServer.start(True)
-    elif option is 2:
-		valueServer = chooseServer()
-		tempServer = Server(valueServer)
-		tempServer.openConsole()
-    elif option is 3:
+    elif option is 2: # Open Console
+        valueServer = chooseServer()
+        tempServer = Server(valueServer)
+        tempServer.openConsole()
+    elif option is 3: # Send Command
         valueServer = chooseServer()
         tempServer = Server(valueServer)
         tempServer.screen.sendCommands()
-    elif option is 4:
+    elif option is 4: # Stop
         valueServer = chooseServer()
         tempServer = Server(valueServer)
         tempServer.stop()
-    elif option is 5:
+    elif option is 5: # Restart
         valueServer = chooseServer()
         tempServer = Server(valueServer)
         tempServer.restart()
-    elif option is 6:
+    elif option is 6: # Kill
         valueServer = chooseServer()
         tempServer = Server(valueServer)
         tempServer.kill()
-    elif option is 7:
+    elif option is 7: # Get Info
         valueServer = chooseServer()
         tempServer = Server(valueServer)
         tempServer.getInfo()
-    elif option is 8:
+    elif option is 8: # Status
         statusServers()
-    elif option is 9:
+    elif option is 9: # Fixing tool
         print "The fixing tool is not implemented yet"
-    elif option is 10:
+    elif option is 10: # License
         print "The License is not implemented yet"
-    elif option is 11:
+    elif option is 11: # Exit
         appExit()
     else:
         raise DsmmError("Invalid value")
+    raw_input("Press enter to continue...")
 
 
 def loopAllServers(goal):
@@ -518,30 +525,42 @@ def loopAllServers(goal):
         print "{0} servers are not in the correct state!".format(retValue)
     return retValue
 
-def chooseServer():
+def chooseServer(goal = None):
     repeatLoop = True
-    counter = 1
     while repeatLoop is True:
+        counter = 1
         print "Choose the server:"
         for value in avaiableServers:
             print "{0} - {1}".format(counter, value)
             counter += 1
+        print "{0} - All Servers".format(counter)
 
         option = raw_input("Insert the value: ")
         try:
             option = int(option)
-            if option > 0 and option < counter:
+            if option is counter:
+                print "This option is not implemented yet."
+                repeatLoop = True
+            elif option > 0 and option < counter+1:
                 repeatLoop = False
             else:
                 repeatLoop = True
         except ValueError:
             print "Error. You entered an invalid value."
             repeatLoop = True
-    counter = 1
-    for value in avaiableServers:
-        if counter is option:
-            retValue = value
-            break
+    if option is counter:
+        if goal is not None:
+            loopAllServers(goal)
+        else:
+            raise DsmmError("Goal cannot be None.")
+    else:
+        counter = 1
+        for value in avaiableServers:
+            if counter is option:
+                retValue = value
+                break
+            else:
+                counter += 1
     return retValue
 
 def statusServers():
@@ -559,8 +578,8 @@ def statusServers():
             raise DsmmError("Status not valid.")
 
 def appExit():
-	print "\nExiting.."
-	exit()
+    print "\nExiting.."
+    exit()
 
 def main():
     while True:
@@ -569,4 +588,4 @@ def main():
         optionSwitch(option)
 
 if __name__ == "__main__":
-	main()
+    main()
