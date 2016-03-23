@@ -177,7 +177,7 @@ class Server(object):
         return
 
     def checkStatus(self):
-        # 0 = NOT RUNNING , 1 = INITILIZED, 2 = RUNNING
+        # 0 = NOT RUNNING , 1 = INITILIZED, 2 = RUNNING, 3 = ERROR
         retValue = 0
         if os.path.isfile("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id)):
             tempFile = open("DSMMFiles/{0}-{1}.sdat".format(self.name,self.id), "r")
@@ -196,7 +196,7 @@ class Server(object):
                         self.runningInfo.status()
                         retValue =  1
                     except:
-                        raise ServerError("The remote server is not responding.")
+                        retValue = 3
                 else:
                     if self.screen.exists:
                         retValue =  2
@@ -269,7 +269,7 @@ class Server(object):
             if preServerStatus is 0:
                 self.initialize()
             if preServerStatus is 2:
-                self.screen.sendCommands("cd %s".format(self.directory))
+                self.screen.sendCommands("cd {0}".format(self.directory))
                 self.screen.sendCommands('java -Xms {0} -Xmx {1} -jar {2} -p {3} -ip {4}'.format(
                     self.minRam, self.maxRam, self.fileName, self.port, self.serverIp))
                 if checkStarted:
@@ -325,7 +325,7 @@ class Server(object):
         return retValue
 
     def openConsole(self):
-        if self.checkStatus() is not 0:
+        if self.screen.exists:
             self.screen.openConsole()
             retValue = True
         else:
@@ -402,6 +402,17 @@ class Server(object):
         print "Trying to start..."
         self.start()
 
+    def sendCommand(self):
+        try:
+            print "Press Ctrl+C to exit."
+            repeatLoop = True
+            while repeatLoop is True:
+                command = raw_input("Insert the command: ")
+                self.screen.sendCommands(command)
+        except KeyboardInterrupt:
+            print ""
+            repeatLoop = False
+
 class DsmmError(Exception):
 
     def __init__(self, value):
@@ -429,6 +440,14 @@ def clearScreen():
 
 def programInfo():
     return "DSMM v" + str(__version__) + " - Dedicaded Server Minecraft Manager by " + __author__
+
+#############
+
+class Options(object):
+
+    def __init__(self, id):
+        return
+
 
 def optInputs():
     #The start function, choose what to do
@@ -473,7 +492,7 @@ def optionSwitch(option):
     elif option is 3: # Send Command
         valueServer = chooseServer()
         tempServer = Server(valueServer)
-        tempServer.screen.sendCommands()
+        tempServer.sendCommand()
     elif option is 4: # Stop
         valueServer = chooseServer()
         tempServer = Server(valueServer)
@@ -564,18 +583,49 @@ def chooseServer(goal = None):
     return retValue
 
 def statusServers():
-    print "Server \tStatus"
+    i = 0
+    for value in avaiableServers:
+        if i is 0:
+            maxLenght = len(value)
+        else:
+            if len(value) > maxLenght:
+                maxLenght = len(value)
+        i += 1
+
+    avaiableServersFixed = ()
+    for value in avaiableServers:
+        if len(value) < maxLenght:
+            tempDiff = maxLenght - len(value)
+            tempValue = value
+            for count in range(1,tempDiff):
+                tempValue = tempValue + " "
+        else:
+            tempValue = value
+        avaiableServersFixed = avaiableServersFixed + (tempValue,)
+
+    if len("Server") < maxLenght:
+        tempDiff = maxLenght - len("Server")
+        tempValue = "Server"
+        for count in range(1,tempDiff):
+            tempValue = tempValue + " "
+
+    print "\n {0}\tStatus".format(tempValue)
+    print ""
+    i = 0
     for value in avaiableServers:
         tempServer = Server(value)
         tempStatus = tempServer.checkStatus()
         if tempStatus is 0:
-            print "{0} \tOffline".format(value)
+            print " {0} \tOffline".format(avaiableServersFixed[i])
         elif tempStatus is 1:
-            print "{0} \tOnline".format(value)
+            print " {0} \tOnline".format(avaiableServersFixed[i])
         elif tempStatus is 2:
-            print "{0} \tInitialized".format(value)
+            print " {0} \tInitialized".format(avaiableServersFixed[i])
+        elif tempStatus is 3:
+            print " {0} \tNot Responding".format(avaiableServersFixed[i])
         else:
             raise DsmmError("Status not valid.")
+        i += 1
 
 def appExit():
     print "\nExiting.."
